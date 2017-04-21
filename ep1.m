@@ -18,8 +18,8 @@ function [b,carry] = subtraiBit(b, pos)
     endif
 endfunction
 
-function n = binToDec(b, tam, exp)
-	pot2 = 2^exp;
+function n = binToDec(b, tam, expoente)
+	pot2 = 2^expoente;
 	i = 1;
 	n = 0;
 	while i <= tam
@@ -33,7 +33,7 @@ endfunction
 # 1 se o primeiro for maior e 2 se o segundo for maior
 function result = comparaNumero(n1, n2, tamanho)
 	result = 0;
-	i = 1
+	i = 1;
 	while (result == 0 && i <= tamanho)
 		if n1(i) != n2(i)
 			if n1(i) > n2(i)
@@ -42,7 +42,7 @@ function result = comparaNumero(n1, n2, tamanho)
 				result = 2
 			endif
 		endif
-		i = i + 1
+		i = i + 1;
 	endwhile
 endfunction
 
@@ -70,28 +70,34 @@ endfunction
 
 function bShift = shiftN(b, n)
 	bShift = zeros(1, 26);
-	if n >= 26
-		n = 26;
-		bShift(26) = 1;
-	else
-		i = 26 - n;
-		while (i <= 23)
-			if b(i) == 1
-				bShift(26) = 1;
-			endif
-			i = i + 1;
-		endwhile
+	if n <= 0
+		for i = 1:23
+			bShift(i) = b(i);
+		end
+	else		
+		if n >= 26
+			n = 26;
+			bShift(26) = 1;
+		else
+			i = 26 - n;
+			while (i <= 23)
+				if b(i) == 1
+					bShift(26) = 1;
+				endif
+				i = i + 1;
+			endwhile
 
-		i = n + 1;
-		while i <= 25
-			if i - n <= 23
-				bShift(i) = b(i - n);
-			else
-				bShift(i) = 0;
-			endif
-			i = i + 1;
-		endwhile
-		bShift(n) = 1;
+			i = n + 1;
+			while i <= 25
+				if i - n <= 23
+					bShift(i) = b(i - n);
+				else
+					bShift(i) = 0;
+				endif
+				i = i + 1;
+			endwhile
+			bShift(n) = 1;
+		endif
 	endif
 endfunction
 
@@ -110,11 +116,11 @@ function b = operaFloat(b1, b2, modo)
 	endif
 	
 	# vamos fazer com que b1 e b2 sejam tais que |b1| >= |b2|
-	compExp = comparaNumero(b1(2:9), b2(2:9));
+	compExp = comparaNumero(b1(2:9), b2(2:9), 8);
 	if compExp == 0
 		# os dois expoentes sao iguais, precisamos saber qual dos numeros tem
 		# o maior modulo
-		if comparaNumero(b1(10:32), b2(10:32)) == 2
+		if comparaNumero(b1(10:32), b2(10:32), 23) == 2
 			aux = b1;
 			b1 = b2;
 			b2 = aux;
@@ -125,7 +131,6 @@ function b = operaFloat(b1, b2, modo)
 		b2 = aux;
 	endif
 
-	maior = b1(10:32);
 	difExpoente = b1(2:9);
 	for i = 1:8
 		if (b2(i+1) == 1)
@@ -133,66 +138,63 @@ function b = operaFloat(b1, b2, modo)
 		endif
 	end
 
-	menorShiftado = shiftN(b2(10:32), binToDec(difExpoente))
-
-	if exp1 >= exp2
-		maior = b1;
-		expMaior = exp1;
-		menor = b2;
-		expMenor = exp2;
-	else
-		maior = b2;
-		expMaior = exp2;
-		menor = b1;
-		expMenor = exp1;
-	endif
-
-	# translada o menor numero para a direita
-	shift = expMaior - expMenor
-	if shift > 25
-		shift = 25;
-	endif
-
-	i = 26 - shift;
-	while (i <= 23)
-		if menor(i) == 1
-			menorShiftado(26) = 1;
-		endif
-		i = i + 1;
-	endwhile
-
-	i = shift + 1;
-	while i <= 25
-		menorShiftado(i) = menor(i - shift)
-		i = i + 1;
-	endwhile
-
-	# copia o maior numero para o vetor onde sera realizada a soma
+	menorShiftado = shiftN(b2(10:32), binToDec(difExpoente, 8, 7));
+	resultado = zeros(1, 26);
 	for i = 1:23
-		b(i) = maior(i);
+		resultado(i) = b1(9 + i);
 	end
 
-	# para cada 1 no menor numero, soma 1 na posicao devida
-	carry = 0
-	for i = 1:26
-		if menorShiftado(i) == 1
-			[b, carry] = somaBit(b, i);
-		endif
-	end
-
-	expoente = expMaior;
-
-	# caso haja carry, eh preciso normalizar novamente
-	if carry == 1
-		if b(25) == 1
-			b(26) = 1;
-		endif
-		for i = i:24
-			b(i+1) = b(i);
+	# se os dois tiverem o mesmo sinal devemos fazer a soma dos modulos
+	if (b1(1) == b2(1))
+		for i = 1:26
+			if menorShiftado(i) == 1
+				[resultado, carryTemp] = somaBit(resultado, i);
+				carry = carry + carryTemp;
+			endif
 		end
-		b(1) = 0;
-		expoente = expoente + 1;
+	else
+		for i = 1:26
+			if menorShiftado(i) == 1
+				[resultado, carryTemp] = subtraiBit(resultado, i);
+				carry = carry + carryTemp;
+			endif
+		end
 	endif
+
+	if carry == 1
+		[expoenteNovo, lixo] = somaBit(b1(2:9), 8);
+		if (resultado(26) + resultado(25) > 0)
+			resultado(26) = 1;
+		else
+			resultado(26) = 0;
+		endif
+		i = 24;
+		while i >= 1
+			resultado(i + 1) = resultado (i);
+		endwhile
+		resultado(1) = 0;
+
+	elseif carry == -1
+		do
+			hiddenBit = resultado(1);
+			[expoenteNovo, lixo] = subtraiBit(b1(2:9), 8);
+			for i = 1:25
+				resultado(i) = resultado(i + 1);
+			end
+			resultado(26) = 0;
+		until hiddenBit == 1;
+	else
+		expoenteNovo = b1(2:9);
+	endif
+	resultado = roundToNearest(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+	b = zeros(1, 32);
+	b(1) = b1(1);
+	for i = 1:8
+		b(i + 1) = expoenteNovo(i);
+	end
+	for i = 1:23
+		b(i + 9) = resultado(i);
+	end
 
 endfunction
 
@@ -328,16 +330,18 @@ endfunction
 
 # retorna a soma de decimais (a1 + a2)
 function b = soma(a1, a2)
+    a1
+    a2
     b1 = geraBin(a1);
     b2 = geraBin(a2);
-    b = somaFloat(b1, b2, 0);
+    b = operaFloat(b1, b2, 0);
 end
 
 # retorna a subtração de decimais (a1 - a2)
 function b = subtrai(a1, a2)
     b1 = geraBin(a1);
     b2 = geraBin(a2);
-    b = somaFloat(b1, b2, 1);
+    b = operaFloat(b1, b2, 1);
 end
 
 # compara a soma (a1 + a2) utilizando a operação '+' do octave com a nossa operação de soma.
@@ -379,3 +383,5 @@ function comparaSubtracao(a1,a2)
         disp("O resultado da subtracao do octave foi diferente ao da nossa subtracao...")
     endif
 endfunction
+
+comparaSubtracao(1000, 12);
