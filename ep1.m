@@ -37,9 +37,9 @@ function result = comparaNumero(n1, n2, tamanho)
 	while (result == 0 && i <= tamanho)
 		if n1(i) != n2(i)
 			if n1(i) > n2(i)
-				result = 1
+				result = 1;
 			else
-				result = 2
+				result = 2;
 			endif
 		endif
 		i = i + 1;
@@ -63,8 +63,8 @@ endfunction
 
 # soma 1 no valor absoluto do numero
 function [b, expoente] = somaULP(b, expoente)
-    [b, carry] = somaBit(b,23)
-    expoente += carry
+    [b, carry] = somaBit(b,23);
+    expoente += carry;
 endfunction
 
 
@@ -106,13 +106,13 @@ endfunction
 # modo = 0 significa soma (b1 + b2)
 # modo = 1 significa subtracao (b1 - b2)
 function b = operaFloat(b1, b2, modo)
-	carry = 0
+	carry = 0;
 	b = zeros(1, 26);
 	menorShiftado = zeros(1, 26);
 
 	# se o modo for subtracao, alteramos o sinal do segundo numero e realizamos uma soma
 	if (modo == 1)
-		b2(0) = (-1)*(b2(0) - 1)
+		b2(1) = (-1)*(b2(1) - 1);
 	endif
 	
 	# vamos fazer com que b1 e b2 sejam tais que |b1| >= |b2|
@@ -143,6 +143,7 @@ function b = operaFloat(b1, b2, modo)
 	for i = 1:23
 		resultado(i) = b1(9 + i);
 	end
+	expoenteNovo = b1(2:9);
 
 	# se os dois tiverem o mesmo sinal devemos fazer a soma dos modulos
 	if (b1(1) == b2(1))
@@ -152,6 +153,20 @@ function b = operaFloat(b1, b2, modo)
 				carry = carry + carryTemp;
 			endif
 		end
+		if binToDec(difExpoente, 8, 7) == 0
+			[expoenteNovo, lixo] = somaBit(expoenteNovo, 8);
+			if (resultado(26) + resultado(25) > 0)
+				resultado(26) = 1;
+			else
+				resultado(26) = 0;
+			endif
+			i = 24;
+			while i >= 1
+				resultado(i + 1) = resultado (i);
+				i = i - 1;
+			endwhile
+			resultado(1) = 0;
+		endif
 	else
 		for i = 1:26
 			if menorShiftado(i) == 1
@@ -159,10 +174,20 @@ function b = operaFloat(b1, b2, modo)
 				carry = carry + carryTemp;
 			endif
 		end
+		if binToDec(difExpoente, 8, 7) == 0
+			do
+				hiddenBit = resultado(1);
+				[expoenteNovo, lixo] = subtraiBit(expoenteNovo, 8);
+				for i = 1:25
+					resultado(i) = resultado(i + 1);
+				end
+				resultado(26) = 0;
+			until hiddenBit == 1;
+		endif
 	endif
 
 	if carry == 1
-		[expoenteNovo, lixo] = somaBit(b1(2:9), 8);
+		[expoenteNovo, lixo] = somaBit(expoenteNovo, 8);
 		if (resultado(26) + resultado(25) > 0)
 			resultado(26) = 1;
 		else
@@ -171,20 +196,19 @@ function b = operaFloat(b1, b2, modo)
 		i = 24;
 		while i >= 1
 			resultado(i + 1) = resultado (i);
+			i = i - 1;
 		endwhile
 		resultado(1) = 0;
 
 	elseif carry == -1
 		do
 			hiddenBit = resultado(1);
-			[expoenteNovo, lixo] = subtraiBit(b1(2:9), 8);
+			[expoenteNovo, lixo] = subtraiBit(expoenteNovo, 8);
 			for i = 1:25
 				resultado(i) = resultado(i + 1);
 			end
 			resultado(26) = 0;
 		until hiddenBit == 1;
-	else
-		expoenteNovo = b1(2:9);
 	endif
 	resultado = roundToNearest(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
 	b = zeros(1, 32);
@@ -315,7 +339,7 @@ function n = floatToDec(b)
 	expoente = expoente - 127;
 	pot2 = 2^expoente;
 	n = 2^expoente;
-	n = n + binToDec(b(10:32), 23, expoente-1)
+	n = n + binToDec(b(10:32), 23, expoente-1);
 	n = n*sinal;
 
 endfunction
@@ -330,8 +354,6 @@ endfunction
 
 # retorna a soma de decimais (a1 + a2)
 function b = soma(a1, a2)
-    a1
-    a2
     b1 = geraBin(a1);
     b2 = geraBin(a2);
     b = operaFloat(b1, b2, 0);
@@ -347,41 +369,60 @@ end
 # compara a soma (a1 + a2) utilizando a operação '+' do octave com a nossa operação de soma.
 # imprimi o resultado
 function comparaSoma(a1,a2)
-    b = soma(a1, a2);
-    resultado = a1 + a2;
-    resultadoIEEE = geraBin(resultado);
+    disp("Começando uma soma")
+    a1
+    a2
+    resultadoObtidoIEEE = soma(a1, a2);
+    resultadoEsperado = a1 + a2
+    resultadoEsperadoIEEE = geraBin(resultadoEsperado);
     igual = 1;
     for i = 1:32
-        if b(i) != resultadoIEEE(i)
+        if resultadoObtidoIEEE(i) != resultadoEsperadoIEEE(i)
             igual = 0;
             break
         endif
     end
+    resultadoEsperadoIEEE
+    resultadoObtidoIEEE
+    resultadoObtido = floatToDec(resultadoObtidoIEEE)
     if igual
         disp("O resultado da soma do octave foi igual ao da nossa soma!")
+    	disp("---------------------------------------------------------")
     else
         disp("O resultado da soma do octave foi diferente ao da nossa soma...")
+       	disp("---------------------------------------------------------")
     endif
 endfunction
 
 # compara a subtracao (a1 - a2) utilizando a operação '-' do octave com a nossa operação de soma.
 # imprimi o resultado
 function comparaSubtracao(a1,a2)
-    b = subtrai(a1, a2);
-    resultado = a1 - a2;
-    resultadoIEEE = geraBin(resultado);
+    disp("Começando uma subtracao")
+    a1
+    a2
+    resultadoObtidoIEEE = subtrai(a1, a2);
+    resultadoEsperado = a1 - a2
+    resultadoEsperadoIEEE = geraBin(resultadoEsperado);
     igual = 1;
     for i = 1:32
-        if b(i) != resultadoIEEE(i)
+        if resultadoObtidoIEEE(i) != resultadoEsperadoIEEE(i)
             igual = 0;
             break
         endif
     end
+    resultadoEsperadoIEEE
+    resultadoObtidoIEEE
+    resultadoObtido = floatToDec(resultadoObtidoIEEE)
     if igual
-        disp("O resultado da subtracao do octave foi igual ao da nossa subtracao!")
+        disp("O resultado da subtracao do octave foi igual ao da nossa soma!")
+    	disp("---------------------------------------------------------")
     else
-        disp("O resultado da subtracao do octave foi diferente ao da nossa subtracao...")
+        disp("O resultado da subtracao do octave foi diferente ao da nossa soma...")
+       	disp("---------------------------------------------------------")
     endif
 endfunction
 
-comparaSubtracao(1000, 12);
+comparaSoma(2, 3);
+comparaSoma(1, 2^(-24));
+comparaSubtracao(1, (1 - 2^(-24)))
+comparaSubtracao(1, (2^(-25) + 2^(-48)))
