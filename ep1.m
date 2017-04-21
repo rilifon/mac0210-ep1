@@ -18,6 +18,22 @@ function [b,carry] = subtraiBit(b, pos)
     endif
 endfunction
 
+# compara dois numeros no formato binario e devolve 0 se forem iguais,
+# 1 se o primeiro for maior e 2 se o segundo for maior
+function result = comparaNumero(n1, n2, tamanho)
+	result = 0;
+	i = 1
+	while (result == 0 && i <= tamanho)
+		if n1(i) != n2(i)
+			if n1(i) > n2(i)
+				result = 1
+			else
+				result = 2
+			endif
+		endif
+		i = i + 1
+	endwhile
+endfunction
 
 # soma num vetor em binario 'b' um bit na posição 'pos', retornando o resultado e se teve carry
 function [b,carry] = somaBit(b, pos)
@@ -57,21 +73,44 @@ function bShift = shiftN(b, n)
 		
 		i = n + 1;
 		while i <= 25
-			bShift(i) = b(i - n);
-			i = i + 1
+			if i - n <= 23
+				bShift(i) = b(i - n);
+			else
+				bShift(i) = 0;
+			endif
+			i = i + 1;
 		endwhile
 		bShift(n) = 1;
 	endif
 endfunction
 
 
-# realiza a soma de dois numeros positivos em floating point
+# realiza a soma ou subtracao de dois numeros positivos em floating point
 # modo = 0 significa soma (b1 + b2)
 # modo = 1 significa subtracao (b1 - b2)
-function [b, expoente] = somaFloat(b1, b2, modo)
+function b = operaFloat(b1, b2, modo)
 	carry = 0
 	b = zeros(1, 26);
+
+	# se o modo for subtracao, alteramos o sinal do segundo numero e realizamos uma soma
+	if (modo == 1)
+		b2(0) = (-1)*(b2(0) - 1)
+	endif
 	menorShiftado = zeros(1, 26);
+	
+	# vamos fazer com que b1 e b2 sejam tais que |b1| >= |b2|
+	compExp = comparaNumero(b1(2:9), b2(2:9));
+	if compExp == 0
+		# os dois expoentes sao iguais, precisamos saber qual dos numeros tem
+		# o maior modulo
+		if comparaNumero(b1(10:32), b2(10:32)) == 2
+			aux = b1;
+			b1 = b2;
+			b2 = aux;
+		endif
+
+
+	endif
 	if exp1 >= exp2
 		maior = b1;
 		expMaior = exp1;
@@ -269,11 +308,6 @@ function numDec = printBin (n)
 	b = geraBin(n);
 	b
 	btemp = b(10:32)
-	for i = 1:26
-		b = shiftN(btemp, i);
-		b
-	end
-
 	numDec = floatToDec(b);
 	numDec
 endfunction
