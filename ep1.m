@@ -18,6 +18,17 @@ function [b,carry] = subtraiBit(b, pos)
     endif
 endfunction
 
+function n = binToDec(b, tam, exp)
+	pot2 = 2^exp;
+	i = 1;
+	n = 0;
+	while i <= tam
+		n = n + pot2*b(i);
+		pot2 = pot2 / 2;
+		i = i + 1;
+	endwhile
+endfunction
+	
 # compara dois numeros no formato binario e devolve 0 se forem iguais,
 # 1 se o primeiro for maior e 2 se o segundo for maior
 function result = comparaNumero(n1, n2, tamanho)
@@ -91,12 +102,12 @@ endfunction
 function b = operaFloat(b1, b2, modo)
 	carry = 0
 	b = zeros(1, 26);
+	menorShiftado = zeros(1, 26);
 
 	# se o modo for subtracao, alteramos o sinal do segundo numero e realizamos uma soma
 	if (modo == 1)
 		b2(0) = (-1)*(b2(0) - 1)
 	endif
-	menorShiftado = zeros(1, 26);
 	
 	# vamos fazer com que b1 e b2 sejam tais que |b1| >= |b2|
 	compExp = comparaNumero(b1(2:9), b2(2:9));
@@ -108,9 +119,22 @@ function b = operaFloat(b1, b2, modo)
 			b1 = b2;
 			b2 = aux;
 		endif
-
-
+	elseif compExp == 2
+		aux = b1;
+		b1 = b2;
+		b2 = aux;
 	endif
+
+	maior = b1(10:32);
+	difExpoente = b1(2:9);
+	for i = 1:8
+		if (b2(i+1) == 1)
+			[difExpoente, lixo] = subtraiBit(difExpoente, i);
+		endif
+	end
+
+	menorShiftado = shiftN(b2(10:32), binToDec(difExpoente))
+
 	if exp1 >= exp2
 		maior = b1;
 		expMaior = exp1;
@@ -285,21 +309,11 @@ function n = floatToDec(b)
 
 	pot2 = 1;
 
-	i = 9;
-	while i >= 2
-		expoente = expoente + pot2*b(i);
-		pot2 = pot2 * 2;
-		i = i - 1;
-	endwhile
-	expoente
+	expoente = binToDec(b(2:9), 8, 7);
 	expoente = expoente - 127;
-
 	pot2 = 2^expoente;
 	n = 2^expoente;
-	for i = 10:32
-		pot2 = pot2/2;
-		n = n + b(i)*pot2;
-	end
+	n = n + binToDec(b(10:32), 23, expoente-1)
 	n = n*sinal;
 
 endfunction
