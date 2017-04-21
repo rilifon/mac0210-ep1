@@ -12,7 +12,7 @@ function [b,carry] = subtraiBit(b, pos)
         endif
         i = i - 1;
     endwhile
-    # fazer certo aqui em baixo	
+    # fazer certo aqui em baixo
     if (carry == 1)
         carry = -1;
     endif
@@ -81,7 +81,7 @@ function bShift = shiftN(b, n)
 			endif
 			i = i + 1;
 		endwhile
-		
+
 		i = n + 1;
 		while i <= 25
 			if i - n <= 23
@@ -160,7 +160,7 @@ function b = operaFloat(b1, b2, modo)
 		endif
 		i = i + 1;
 	endwhile
-	
+
 	i = shift + 1;
 	while i <= 25
 		menorShiftado(i) = menor(i - shift)
@@ -193,7 +193,7 @@ function b = operaFloat(b1, b2, modo)
 		b(1) = 0;
 		expoente = expoente + 1;
 	endif
-	
+
 endfunction
 
 # arredonda na direcao do +infinito
@@ -292,7 +292,7 @@ endfunction
 function expBin = expToBin(x)
 	x = x + 127;
 	expBin = zeros(1, 8);
-	while x > 0	
+	while x > 0
 		expoente = floor(log2(x));
 		x = x - 2^expoente;
 		# setamos o bit na posicao 9 - (expoente + 1) para que o vetor fique no
@@ -326,4 +326,56 @@ function numDec = printBin (n)
 	numDec
 endfunction
 
-printBin(58)
+# retorna a soma de decimais (a1 + a2)
+function b = soma(a1, a2)
+    b1 = geraBin(a1);
+    b2 = geraBin(a2);
+    b = somaFloat(b1, b2, 0);
+end
+
+# retorna a subtração de decimais (a1 - a2)
+function b = subtrai(a1, a2)
+    b1 = geraBin(a1);
+    b2 = geraBin(a2);
+    b = somaFloat(b1, b2, 1);
+end
+
+# compara a soma (a1 + a2) utilizando a operação '+' do octave com a nossa operação de soma.
+# imprimi o resultado
+function comparaSoma(a1,a2)
+    b = soma(a1, a2);
+    resultado = a1 + a2;
+    resultadoIEEE = geraBin(resultado);
+    igual = 1;
+    for i = 1:32
+        if b(i) != resultadoIEEE(i)
+            igual = 0;
+            break
+        endif
+    end
+    if igual
+        disp("O resultado da soma do octave foi igual ao da nossa soma!")
+    else
+        disp("O resultado da soma do octave foi diferente ao da nossa soma...")
+    endif
+endfunction
+
+# compara a subtracao (a1 - a2) utilizando a operação '-' do octave com a nossa operação de soma.
+# imprimi o resultado
+function comparaSubtracao(a1,a2)
+    b = subtrai(a1, a2);
+    resultado = a1 - a2;
+    resultadoIEEE = geraBin(resultado);
+    igual = 1;
+    for i = 1:32
+        if b(i) != resultadoIEEE(i)
+            igual = 0;
+            break
+        endif
+    end
+    if igual
+        disp("O resultado da subtracao do octave foi igual ao da nossa subtracao!")
+    else
+        disp("O resultado da subtracao do octave foi diferente ao da nossa subtracao...")
+    endif
+endfunction
