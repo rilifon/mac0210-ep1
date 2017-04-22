@@ -65,4 +65,17 @@ function z = f1_(x)
     z = 2*x;
 endfunction
 
+function newton_basins(f, f_, l, u, p, epsilon, max_iter)
+  passoL = (l(2) - l(1))/p(1);
+  passoU = (u(2) 0 u(1))/p(2);
+  resultados = zeros(p(1), p(2));
+  raizes = zeros(1, 0);
+  for x = 1:p(1)
+    for y = 1:p(2)
+      resultados(x, y) = newton(f, f_, [l(1) + (x-1)*passoL, u(1) + (y-1)*passoU], epsilon, max_iter);
+      [raizes, resultados(x, y)] = inclueRaiz(resultados(x, y), raizes, epsilon);
+    end
+  end
+endfunction
+
 raiz = newton(@f1, @f1_, [1,1], EPSILON, 10000)
