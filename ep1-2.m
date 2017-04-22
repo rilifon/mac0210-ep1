@@ -1,15 +1,11 @@
-
-#Configura nosso ep para poder ser usado
-function config()
-
-endfunction
+EPSILON = 2^(-20);
 
 #compara raiz com raizes ja encontradas. se nao viu uma raiz nova, associa uma cor a ela. se a raiz nao existe (ou seja nao convergiu), associa a cor de nao convergencia
-function novasRaizes, indiceRaiz = inclueRaiz(raiz, raizes, epsilon)
+function [novasRaizes, indiceRaiz] = inclueRaiz(raiz, raizes, epsilon)
   len = length(raizes);
   indiceRaiz = 0;
   for i = 1:len
-    if novaRaiz && (norm(raiz - raizes(i)<= 2*epsilon)
+    if novaRaiz && (norm(raiz - raizes(i)<= 2*epsilon))
       indiceRaiz = i;
     endif
   end
@@ -26,31 +22,47 @@ function novasRaizes, indiceRaiz = inclueRaiz(raiz, raizes, epsilon)
 
 endfunction
 
-function newton(f, f_, x0, epsilon, max_iter)
-
+function raiz = newton(f, f_, x0, epsilon, max_iter)
     xprev = x0;
     raiz = nan;
+    #Aplica o metodo de newton, com condicao de parada fazer ao maximo 'max_iter' iteracoes
+    for cont=1:max_iter
 
-    #Aplica o metodo de newton
-    while(true)
-        #Primeira condição de não convergência
-        if (f_(xprev) == 0)
+        #Condição de não convergência: f'(x) == 0, que implicaria em uma divisao por 0
+        resultado_f_ = f_(vectToComplex(xprev));
+        resultado_f = f(vectToComplex(xprev));
+        if (resultado_f_ == 0)
             break
         endif
 
-        xnext = xprev - f(xprev)/f_(xprev);
+        xnext = xprev - complexToVec(resultado_f/resultado_f_);
+        dist = norm(xnext - xprev, 2); #Distancia euclidiana entre os dois pontos
+        if (dist <= epsilon)
+            raiz = xnext;
+            raiz = vectToComplex(raiz);
+            break
+        endif
 
-    endwhile
+        xprev = xnext;
 
-endfunction
-
-function newton_basins(f, f_, l, u, p, epsilon, max_iter)
-  passoL = (l(2) - l(1))/p(1);
-  passoU = (u(2) 0 u(1))/p(2);
-  resultados = zeros(p(1), p(2));
-  for i = 1:p(1)
-    for j = 1:p(2)
-      resultados(i, j) = newton(f, f_, )
     end
-  end
+
 endfunction
+
+function v = complexToVec(z)
+    v = [real(z),z - real(z)];
+endfunction
+
+function z = vectToComplex(v)
+    z = (v(1) + v(2)*i);
+endfunction
+
+function z = f1(x)
+    z = x^2 + 1;
+endfunction
+
+function z = f1_(x)
+    z = 2*x;
+endfunction
+
+raiz = newton(@f1, @f1_, [1,1], EPSILON, 10000)
