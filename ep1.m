@@ -105,7 +105,7 @@ endfunction
 # realiza a soma ou subtracao de dois numeros positivos em floating point
 # modo = 0 significa soma (b1 + b2)
 # modo = 1 significa subtracao (b1 - b2)
-function b = operaFloat(b1, b2, modo)
+function b = operaFloat(b1, b2, modo, rounding)
 	carry = 0;
 	b = zeros(1, 26);
 	menorShiftado = zeros(1, 26);
@@ -210,7 +210,17 @@ function b = operaFloat(b1, b2, modo)
 			resultado(26) = 0;
 		until hiddenBit == 1;
 	endif
-	resultado = roundToNearest(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+	
+	switch(rounding)
+		case 1
+			resultado = roundToNearest(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+		case 2
+			resultado = roundToZero(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+		case 3
+			resultado = roundUp(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+		case 4
+			resultado = roundDown(resultado, binToDec(expoenteNovo, 8, 7), b1(1));
+	endswitch
 	b = zeros(1, 32);
 	b(1) = b1(1);
 	for i = 1:8
@@ -250,11 +260,16 @@ end
 # arredonda para o numero mais perto
 function [b, expoente] = roundToNearest(b, expoente, sinal)
 	if b(24) == 0
-		# o mais perto é o x-, ou seja, o valor mais perto de x em direção ao -infinito
-		[b, expoente] = roundDown(b, expoente, sinal);
+		# o mais perto de x eh em direção ao zero
+		[b, expoente] = roundToZero(b, expoente, sinal);
 	elseif (b(25) == 1 || b(26) == 1)
-		# o mais perto é o x+, ou seja, o valor mais perto de x em direção ao +infinito
-		[b, expoente] = roundUp(b, expoente, sinal);
+		# o mais perto é na direcao oposta ao 0, x+ caso seja positivo (arredondar em direcao a + infinito)
+		# caso contrario, x- (arredondar em direcao a -infinito)
+		if sinal == 0
+			[b, expoente] = roundUp(b, expoente, sinal);
+		else
+			[b, expoente] = roundDown(b, expoente, sinal);
+		endif
 	else
 		# empate, então pega aquele entre x- ou x+ que tenha o ultimo bit do significando == 0
 		[a1, temp1] = roundDown(b, expoente, sinal);
@@ -294,15 +309,26 @@ function [b, expoente] = converteBinario(n)
 endfunction
 
 # Recebe um numero no formato decimal e o converte para o formato da IEEE
-function numIEEE = geraBin(n)
+function numIEEE = geraBin(n, rounding)
 	numIEEE = zeros (1, 32);
 	if (n < 0)
 		numIEEE(1) = 1;
-		n = n*-1;
+		n = n*(-1);
 	endif
 
-	[b, expoente] = converteBinario(n);
-	[b, expoente] = roundToNearest(b, expoente, numIEEE(1));
+	[b, expoente] = converteBinario(n)
+	
+	switch(rounding)
+		case 1
+			[b, expoente] = roundToNearest(b, expoente, numIEEE(1));
+		case 2
+			[b, expoente] = roundToZero(b, expoente, numIEEE(1));
+		case 3
+			[b, expoente] = roundUp(b, expoente, numIEEE(1));
+		case 4
+			[b, expoente] = roundDown(b, expoente, numIEEE(1));
+	endswitch
+	
 	expBin = expToBin(expoente);
 
 	# armazena os bits do expoente no vetor que representa o numero
@@ -353,28 +379,29 @@ function numDec = printBin (n)
 endfunction
 
 # retorna a soma de decimais (a1 + a2)
-function b = soma(a1, a2)
-    b1 = geraBin(a1);
-    b2 = geraBin(a2);
-    b = operaFloat(b1, b2, 0);
+function b = soma(a1, a2, rounding)
+    b1 = geraBin(a1, rounding);
+    b2 = geraBin(a2, rounding);
+    b = operaFloat(b1, b2, 0, rounding);
 end
 
 # retorna a subtração de decimais (a1 - a2)
-function b = subtrai(a1, a2)
-    b1 = geraBin(a1);
-    b2 = geraBin(a2);
-    b = operaFloat(b1, b2, 1);
+function b = subtrai(a1, a2, rounding)
+    b1 = geraBin(a1, rounding);
+    b2 = geraBin(a2, rounding);
+    b = operaFloat(b1, b2, 1, rounding);
 end
 
 # compara a soma (a1 + a2) utilizando a operação '+' do octave com a nossa operação de soma.
 # imprimi o resultado
-function comparaSoma(a1,a2)
+function comparaSoma(a1,a2, rounding)
     disp("Começando uma soma")
+    imprimiRound(rounding)
     a1
     a2
-    resultadoObtidoIEEE = soma(a1, a2);
+    resultadoObtidoIEEE = soma(a1, a2, rounding);
     resultadoEsperado = a1 + a2
-    resultadoEsperadoIEEE = geraBin(resultadoEsperado);
+    resultadoEsperadoIEEE = geraBin(resultadoEsperado, rounding);
     igual = 1;
     for i = 1:32
         if resultadoObtidoIEEE(i) != resultadoEsperadoIEEE(i)
@@ -396,13 +423,14 @@ endfunction
 
 # compara a subtracao (a1 - a2) utilizando a operação '-' do octave com a nossa operação de soma.
 # imprimi o resultado
-function comparaSubtracao(a1,a2)
+function comparaSubtracao(a1,a2, rounding)
     disp("Começando uma subtracao")
+    imprimiRound(rounding)
     a1
     a2
-    resultadoObtidoIEEE = subtrai(a1, a2);
+    resultadoObtidoIEEE = subtrai(a1, a2, rounding);
     resultadoEsperado = a1 - a2
-    resultadoEsperadoIEEE = geraBin(resultadoEsperado);
+    resultadoEsperadoIEEE = geraBin(resultadoEsperado, rounding);
     igual = 1;
     for i = 1:32
         if resultadoObtidoIEEE(i) != resultadoEsperadoIEEE(i)
@@ -422,7 +450,23 @@ function comparaSubtracao(a1,a2)
     endif
 endfunction
 
-comparaSoma(2, 3);
-comparaSoma(1, 2^(-24));
-comparaSubtracao(1, (1 - 2^(-24)))
-comparaSubtracao(1, (2^(-25) + 2^(-48)))
+function imprimiRound(rounding)
+	
+	switch(rounding)
+
+		case 1
+			disp("Utilizando arredondamento: roundToNearest")
+		case 2
+			disp("Utilizando arredondamento: roundToZero")
+		case 3
+			disp("Utilizando arredondamento: roundUp")
+		case 4
+			disp("Utilizando arredondamento: roundDown")
+	endswitch
+
+endfunction
+
+comparaSoma(2, 3, 1);
+comparaSoma(1, 2^(-24), 1);
+comparaSubtracao(1, (1 - 2^(-24)), 1)
+comparaSubtracao(1, (2^(-25) + 2^(-48)), 1)
