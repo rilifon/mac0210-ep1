@@ -67,13 +67,34 @@ endfunction
 function z = f1(x)
     #z = x^3 - 1;
     #z = x^2 + 1;
-    z = x^4 - 1;
+    #z = x^4 - 1;
+    #z = x^7 - 1;
+    z = x^10 - 4*x^7 + 3*x^3 -8*x -1;
 endfunction
 
 function z = f1_(x)
     #z = 3*(x^2);
     #z = 2*x;
-    z = 4*(x^3);
+    #z = 4*(x^3);
+    #z = 7*(x^6);
+    z = 10*x^9 - 28*x^6 + 9*x^2 -8;
+endfunction
+
+function writeOutput(resultados, raizes, temNan)
+    filename = "output.txt";
+    numRaizes = length(raizes) + temNan
+    fid = fopen(filename, 'w');
+    [p1, p2] = size(resultados);
+
+    for cont1 = 1:p1
+      for cont2 = 1:p2
+
+        fprintf(fid, "%d %d %d\n", cont1-1, cont2-1, (1024/numRaizes)*resultados(cont1,cont2))
+
+      end
+    end
+
+    fclose(fid);
 endfunction
 
 function newton_basins(f, f_, l, u, p, epsilon, max_iter)
@@ -99,10 +120,11 @@ function newton_basins(f, f_, l, u, p, epsilon, max_iter)
       endif
     end
   end
-  resultados
-  raizes
+
+  writeOutput(resultados, raizes, temNan)
+  disp("acabou de achar bacias de convergencia")
 endfunction
 
-newton_basins(@f1, @f1_, [-2, 2], [-2, 2], [50, 50], EPSILON, 100)
+newton_basins(@f1, @f1_, [-2, 2], [-2, 2], [300, 300], EPSILON, 100)
 
 #raiz = newton(@f1, @f1_, [1,1], EPSILON, 10000)
